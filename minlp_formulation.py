@@ -44,7 +44,12 @@ def create_minlp(data):
     x_max = max(max(m.suppl_x[i] for i in m.suppl), max(m.mkt_x[j] for j in m.mkt))
     y_min = min(min(m.suppl_y[i] for i in m.suppl), min(m.mkt_y[j] for j in m.mkt))
     y_max = max(max(m.suppl_y[i] for i in m.suppl), max(m.mkt_y[j] for j in m.mkt))
-    dist_max = sqrt((x_max-x_min)**2 + (y_max-y_min)**2)
+    m.x_min = Param(m.fac, initialize={k: x_min for k in m.fac}, mutable=True)
+    m.x_max = Param(m.fac, initialize={k: x_max for k in m.fac}, mutable=True)
+    m.y_min = Param(m.fac, initialize={k: y_min for k in m.fac}, mutable=True)
+    m.y_max = Param(m.fac, initialize={k: y_max for k in m.fac}, mutable=True)
+
+    dist_max = sqrt((x_max - x_min)**2 + (y_max-y_min)**2)
     dist_min = 0.5 # arbitrary
 
     # Block of Equations per time period
@@ -75,8 +80,8 @@ def create_minlp(data):
 
         # Constraints
         def investment_cost(_b):
-            return _b.inv_cost == sum(m.FIC[k, t]*_b.b[k] + m.VIC[k, t] * _b.f_fac[k] for k in m.fac)
-        b.investment_cost = Constraint(rule=investment_cost) # TODO: change VIC to depend on cap
+            return _b.inv_cost == sum((m.FIC[k, t] + m.VIC[k, t] * m.cap[k])*_b.b[k] for k in m.fac)
+        b.investment_cost = Constraint(rule=investment_cost)
 
         def operating_cost(_b):
             return _b.op_cost == sum(m.FOC[k, t]*_b.w[k] + m.VOC[k, t] * _b.f_fac[k] for k in m.fac)
@@ -122,11 +127,11 @@ def create_minlp(data):
         b.dist_fac2mkt_rule = Constraint(m.fac, m.mkt, rule=dist_fac2mkt_rule)
 
         def x_bigM(_b, k):
-            return _b.fac_x[k] <= x_max * _b.w[k]
+            return _b.fac_x[k] <= m.x_max[k] * _b.w[k]
         b.x_bigM = Constraint(m.fac, rule=x_bigM)
 
         def y_bigM(_b, k):
-            return _b.fac_y[k] <= y_max * _b.w[k]
+            return _b.fac_y[k] <= m.y_max[k] * _b.w[k]
         b.y_bigM = Constraint(m.fac, rule=y_bigM)
 
         def supp2fac_bigM(_b, i, k):

@@ -46,19 +46,19 @@ def create_mip(data, p_x, p_y):
     def planning_block_rule(b, t):
 
         # Variables declaration
-        b.f_supp2fac = Var(m.suppl, m.fac, m.part, domain=NonNegativeReals)
-        b.f_fac2mkt = Var(m.fac, m.mkt, m.part, domain=NonNegativeReals)
-        b.f_fac = Var(m.fac, m.part, domain=NonNegativeReals)
-        b.cost_supp2fac = Var(domain=NonNegativeReals)
-        b.cost_fac2mkt = Var(domain=NonNegativeReals)
-        b.inv_cost = Var(domain=NonNegativeReals)
-        b.op_cost = Var(domain=NonNegativeReals)
-        b.w = Var(m.fac, m.part, domain=Binary) # binary for when facility is in place and operating
-        b.w_prev = Var(m.fac, m.part, domain=Binary)
-        b.b = Var(m.fac, m.part, domain=Binary) # binary for building facility k in time period t
-        b.z_supp2fac = Var(m.suppl, m.fac, m.part,  domain=Binary)
-        b.z_fac2mkt = Var(m.fac, m.mkt, m.part, domain=Binary)
-        b.alphafut = Var(domain=NonNegativeReals)
+        b.f_supp2fac = Var(m.suppl, m.fac, m.part, within=NonNegativeReals)
+        b.f_fac2mkt = Var(m.fac, m.mkt, m.part, within=NonNegativeReals)
+        b.f_fac = Var(m.fac, m.part, within=NonNegativeReals)
+        b.cost_supp2fac = Var(within=NonNegativeReals)
+        b.cost_fac2mkt = Var(within=NonNegativeReals)
+        b.inv_cost = Var(within=NonNegativeReals)
+        b.op_cost = Var(within=NonNegativeReals)
+        b.w = Var(m.fac, m.part, within=Binary) # binary for when facility is in place and operating
+        b.w_prev = Var(m.fac, m.part, within=Binary)
+        b.b = Var(m.fac, m.part, within=Binary) # binary for building facility k in time period t
+        b.z_supp2fac = Var(m.suppl, m.fac, m.part,  within=Binary)
+        b.z_fac2mkt = Var(m.fac, m.mkt, m.part, within=Binary)
+        b.alphafut = Var(within=NonNegativeReals)
 
         # Objective function
         def obj_rule(_b):
