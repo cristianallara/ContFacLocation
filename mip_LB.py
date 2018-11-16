@@ -40,7 +40,7 @@ def create_mip(data, p_x, p_y):
     m.dist_mkt = Param(m.mkt, m.part, default=0, mutable=True)
 
     #Decomposition Parameters
-    m.w_prev_par = Param(m.fac, m.t, m.part, initialize=0, mutable=True)
+    m.w_prev_par = Param(m.fac, m.part, m.t, initialize=0, mutable=True)
 
     # Block of Equations per time period
     def planning_block_rule(b, t):
@@ -62,7 +62,7 @@ def create_mip(data, p_x, p_y):
 
         # Objective function
         def obj_rule(_b):
-            return m.i_factor[t] * (_b.inv_cost + _b.op_cost + _b.cost_supp2fac + _b.cost_fac2mkt + _b.alphafut)
+            return m.i_factor[t] * (_b.inv_cost + _b.op_cost + _b.cost_supp2fac + _b.cost_fac2mkt) + _b.alphafut
         b.obj = Objective(rule=obj_rule, sense=minimize)
 
         # Constraints
@@ -155,9 +155,11 @@ def create_mip(data, p_x, p_y):
             return sum(_b.b[k, p] for p in m.part) <= 1
         b.logic_9 = Constraint(m.fac, rule=logic_9)
 
-        def equal_1(_b, k, p):
-            return _b.w_prev[k, p] == m.w_prev_par[k, t, p]
-        b.equal_1 = Constraint(m.fac, m.part, rule=equal_1)
+        def equal(_b, k, p):
+            if m.t.ord(t) > 1:
+                return _b.w_prev[k, p] == m.w_prev_par[k, p, m.t[m.t.ord(t)-1]]
+            return _b.w_prev[k, p] == 0
+        b.equal = Constraint(m.fac, m.part, rule=equal)
 
         def sym_1(_b, l, u):
             if m.distr.ord(l) < m.distr.ord(u):
@@ -182,6 +184,8 @@ def create_mip(data, p_x, p_y):
                 return sum(_b.w[n, pp] for pp in m.part if m.part.ord(pp) <= m.part.ord(p)) >= _b.w[v, p]
             return Constraint.Skip
         b.sym_4 = Constraint(m.centr, m.centr, m.part, rule=sym_4)
+
+        b.fut_cost = ConstraintList()
 
     m.Bl = Block(m.t, rule=planning_block_rule)
     return m
