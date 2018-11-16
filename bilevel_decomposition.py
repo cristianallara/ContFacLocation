@@ -3,8 +3,8 @@ from mip_LB import create_mip
 from grid_discretization import discretize_space
 
 
-def bilevel_for_single_period(t, minlp, data, x_min, x_max, y_min, y_max,  p_x, p_y, dist_min, opt_tol, time_limit,
-                              max_iter, bilevel_opt_tol):
+def bilevel_for_single_period(t, minlp, data, x_min, x_max, y_min, y_max,  p_x, p_y, n_x, n_y, dist_min, opt_tol,
+                              time_limit, max_iter, bilevel_opt_tol):
     mip_sol = {}
     nlp_sol = {}
     opt_gap = {}
@@ -97,6 +97,7 @@ def bilevel_for_single_period(t, minlp, data, x_min, x_max, y_min, y_max,  p_x, 
                         load_solutions=True
                         )
         nlp_sol[iter_] = minlp.Bl[t].obj()
+        print('solution of iteration' , iter_, ': ', nlp_sol)
         UB = min(nlp_sol[idx] for idx in iter_list if idx <= iter_)
         opt_gap[iter_] = (UB - LB) / UB
         print('LB: ', LB)
@@ -104,13 +105,15 @@ def bilevel_for_single_period(t, minlp, data, x_min, x_max, y_min, y_max,  p_x, 
         print('opt gap: ', opt_gap[iter_])
 
         if opt_gap[iter_] <= bilevel_opt_tol or iter_ == max_iter:
+            fac_x = {k: minlp.Bl[t].fac_x[k].value}
+            fac_y = {k: minlp.Bl[t].fac_y[k].value}
             cost = UB
             break
         else:
-            p_x += 10
-            p_y += 10
+            p_x += n_x
+            p_y += n_y
 
-    return cost
+    return cost, w_fx, fac_x, fac_y
 
 
 
