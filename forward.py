@@ -8,7 +8,10 @@ def forward_pass(bl, state_vars, opt_tol_mip, time_limit_mip):
     mipsolver.options['mipgap'] = opt_tol_mip
     mipsolver.options['timelimit'] = time_limit_mip
     mipsolver.options['threads'] = 6
+    mipsolver.options['FeasibilityTol'] = 1e-9
     mipsolver.solve(bl) # , tee=True)
+
+    # bl.w.pprint()
 
     # Fix the state variable as parameter for next t
 

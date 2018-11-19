@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 
-def create_mip(data, p_x, p_y):
+def create_LR(data, p_x, p_y):
 
     suppliers, xi, yi, time_periods, markets, xj, yj, centr_facilities, distr_facilities, facilities, cv, mc, a, d, \
     RM, FIC, VIC, FOC, VOC, ft1, ft2, vt1, vt2, interest_factor = data
@@ -60,6 +60,9 @@ def create_mip(data, p_x, p_y):
         b.z_fac2mkt = Var(m.fac, m.mkt, m.part, within=Binary)
         b.alphafut = Var(within=NonNegativeReals)
 
+        # Decomposition parameters
+        b.mltp = Param(m.fac, m.part, initialize=0, mutable=True)
+
         for k in m.fac:
             for p in m.part:
                 if m.t.ord(t) == 1:
@@ -67,7 +70,8 @@ def create_mip(data, p_x, p_y):
 
         # Objective function
         def obj_rule(_b):
-            return m.i_factor[t] * (_b.inv_cost + _b.op_cost + _b.cost_supp2fac + _b.cost_fac2mkt) + _b.alphafut
+            return m.i_factor[t] * (_b.inv_cost + _b.op_cost + _b.cost_supp2fac + _b.cost_fac2mkt) + _b.alphafut \
+                   + sum(_b.mltp[k, p] * (_b.w[k, p] - m.w_prev_par[k, p, t]) for k in m.fac for p in m.part)
         b.obj = Objective(rule=obj_rule, sense=minimize)
 
         # Constraints
@@ -160,12 +164,6 @@ def create_mip(data, p_x, p_y):
             return sum(_b.b[k, p] for p in m.part) <= 1
         b.logic_9 = Constraint(m.fac, rule=logic_9)
 
-        def equal(_b, k, p):
-            if m.t.ord(t) > 1:
-                return _b.w_prev[k, p] == m.w_prev_par[k, p, m.t[m.t.ord(t)-1]]
-            return Constraint.Skip
-        b.equal = Constraint(m.fac, m.part, rule=equal)
-
         def sym_1(_b, l, u):
             if m.distr.ord(l) < m.distr.ord(u):
                 return sum(_b.w[l, p] + _b.w_prev[l, p] for p in m.part) >= sum(_b.w[u, p] for p in m.part)
@@ -194,4 +192,3 @@ def create_mip(data, p_x, p_y):
 
     m.Bl = Block(m.t, rule=planning_block_rule)
     return m
-
