@@ -168,13 +168,13 @@ def create_mip(data, p_x, p_y):
 
         def sym_1(_b, l, u):
             if m.distr.ord(l) < m.distr.ord(u):
-                return sum(_b.w[l, p] + _b.w_prev[l, p] for p in m.part) >= sum(_b.w[u, p] for p in m.part)
+                return sum(_b.w[l, p] for p in m.part) >= sum(_b.w[u, p] for p in m.part)
             return Constraint.Skip
         b.sym_1 = Constraint(m.distr, m.distr, rule=sym_1)
 
         def sym_2(_b, n, v):
             if m.centr.ord(n) < m.centr.ord(v):
-                return sum(_b.w[n, p] + _b.w_prev[n, p] for p in m.part) >= sum(_b.w[v, p] for p in m.part)
+                return sum(_b.w[n, p] for p in m.part) >= sum(_b.w[v, p] for p in m.part)
             return Constraint.Skip
         b.sym_2 = Constraint(m.centr, m.centr, rule=sym_2)
 
