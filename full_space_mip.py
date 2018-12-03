@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 
-def create_multiperiod_mip(data, p_x, p_y):
+def create_multiperiod_mip(data, n_part):
 
     suppliers, xi, yi, time_periods, markets, xj, yj, centr_facilities, distr_facilities, facilities, cv, mc, a, d, \
     RM, FIC, VIC, FOC, VOC, ft1, ft2, vt1, vt2, interest_factor = data
@@ -9,7 +9,7 @@ def create_multiperiod_mip(data, p_x, p_y):
     m = ConcreteModel()
 
     # Set declarations
-    m.part = Set(initialize=RangeSet(p_x*p_y), ordered=True)
+    m.part = Set(initialize=RangeSet(n_part), ordered=True)
     m.suppl = Set(initialize=suppliers, ordered=True)
     m.fac = Set(initialize=facilities, ordered=True)
     m.distr = Set(within=m.fac, initialize=distr_facilities, ordered=True)

@@ -2,7 +2,8 @@ from pyomo.environ import *
 from input_data import read_data
 from full_space_minlp import create_multiperiod_minlp
 from full_space_mip import create_multiperiod_mip
-from grid_discretization import discretize_space
+from uniform_grid import discretize_space
+from nonuniform_grid import refine_gride
 import time
 
 start_time = time.time()
@@ -10,19 +11,19 @@ start_time = time.time()
 # ########################################## User-defined parameters #############################################
 
 # bilevel decomposition
-max_iter_bilevel = 20
+max_iter_bilevel = 10
 opt_tol_bilevel = 0.005         # optimality tolerance for the nested decomposition
 
 # MILP
-time_limit_mip = 300             # time limit in seconds for mip_LB
+time_limit_mip = 100             # time limit in seconds for mip_LB
 opt_tol_mip = 0.0
 
 # grid
-dist_min = 0.0                  # arbitrary
-p_x = 5                         # start grid with p_x X p_y partitions
-p_y = 5
-n_x = 5                         # adds p_x + n_x and p_y + n_y in each iteration of the bilevel decomposition
-n_y = 5
+dist_min = 0.2                  # arbitrary
+p_x = 2                         # start grid with p_x X p_y partitions
+p_y = 2
+n_x = 2                         # adds p_x + n_x and p_y + n_y in each iteration of the bilevel decomposition
+n_y = 2
 
 # ################################################################################################################
 
@@ -52,20 +53,36 @@ nlp_sol = {}
 opt_gap = {}
 
 iter_list = range(1, max_iter_bilevel+1)
+
+# Star algorithm with uniform grid p_x * p_y
+mip = create_multiperiod_mip(data, p_x*p_y)
+dist_supp, dist_mkt, max_dist_supp, max_dist_mkt, xp_min, xp_max, yp_min, yp_max, mapping \
+    = discretize_space(mip, x_min, x_max, y_min, y_max, p_x, p_y)
+
 for iter_ in iter_list:
 
-    mip = create_multiperiod_mip(data, p_x, p_y)
-    dist_supp, dist_mkt, xp_mid, yp_mid, length_x, length_y = discretize_space(mip, x_min, x_max, y_min,
-                                                                                       y_max, p_x, p_y, dist_min)
+    # Master problem
 
     for i in mip.suppl:
         for p in mip.part:
-            # print(i, p, dist_supp[i, p])
-            mip.dist_supp[i, p] = dist_supp[i, p]
+            if dist_supp[i, p] >= dist_min:
+                mip.dist_supp[i, p] = dist_supp[i, p]
+            else:
+                mip.dist_supp[i, p] = dist_min
+            if max_dist_supp[i, p] <= dist_min:
+                for k in mip.fac:
+                    for t in mip.t:
+                        mip.w[k, p, t].fix(0.0)
     for j in mip.mkt:
         for p in mip.part:
-            # print(j, p, dist_mkt[j, p])
-            mip.dist_mkt[j, p] = dist_mkt[j, p]
+            if dist_mkt[j, p] >= dist_min:
+                mip.dist_mkt[j, p] = dist_mkt[j, p]
+            else:
+                mip.dist_mkt[j, p] = dist_min
+            if max_dist_mkt[j, p] <= dist_min:
+                for k in mip.fac:
+                    for t in mip.t:
+                        mip.w[k, p, t].fix(0.0)
 
     # Solve MIP for LB
     mipsolver = SolverFactory('gurobi')
@@ -85,7 +102,7 @@ for iter_ in iter_list:
             for k in mip.fac:
                 w_p[k, p, t] = round(mip.w[k, p, t].value)
                 if w_p[k, p, t] != 0:
-                    print (k, p, t, w_p[k, p, t])
+                    print((k, p, t), w_p[k, p, t])
                 for i in mip.suppl:
                     z_supp2fac_p[i, k, p, t] = round(mip.z_supp2fac[i, k, p, t].value)
                 for j in mip.mkt:
@@ -126,10 +143,10 @@ for iter_ in iter_list:
         else:
             for p in mip.part:
                 if w_p[k, p, t] == 1.0:
-                    fac_x_max[k] = xp_mid[p] + length_x/2
-                    fac_x_min[k] = xp_mid[p] - length_x/2
-                    fac_y_max[k] = yp_mid[p] + length_y/2
-                    fac_y_min[k] = yp_mid[p] - length_y/2
+                    fac_x_max[k] = xp_max[p]
+                    fac_x_min[k] = xp_min[p]
+                    fac_y_max[k] = yp_max[p]
+                    fac_y_min[k] = yp_min[p]
     for k in mip.fac:
         minlp.x_max[k] = fac_x_max[k]
         minlp.x_min[k] = fac_x_min[k]
@@ -150,6 +167,7 @@ for iter_ in iter_list:
     nlp_sol[iter_] = minlp.obj()
     minlp.fac_x.pprint()
     minlp.fac_y.pprint()
+
     print('solution of iteration', iter_, ': ', nlp_sol)
     UB = min(nlp_sol[idx] for idx in iter_list if idx <= iter_)
     opt_gap[iter_] = (UB - LB) / UB
@@ -165,10 +183,36 @@ for iter_ in iter_list:
         print("Solution Time (s)", elapsed_time)
         break
     else:
-        p_x += n_x
-        p_y += n_y
+        # Choose the regions to repartition
+        select_part = {}
+        for p in mip.part:
+            if sum(w_p[k, p, t] for k in mip.fac for t in mip.t) == 0:
+                select_part[p] = 0
+            else:
+                select_part[p] = 1
+                for k in mip.fac:
+                    if sum(w_p[k, p, t] for t in mip.t) >= 1:
+                        if xp_min[p] == minlp.fac_x[k].value:
+                            for pp in mip.part:
+                                if xp_max[pp] == xp_min[p] and yp_max[pp] <= yp_max[p] and yp_min[pp] >= yp_min[p]:
+                                    select_part[pp] = 1
+                        if xp_max[p] == minlp.fac_x[k].value:
+                            for pp in mip.part:
+                                if xp_min[pp] == xp_max[p] and yp_max[pp] <= yp_max[p] and yp_min[pp] >= yp_min[p]:
+                                    select_part[pp] = 1
+                        if yp_min[p] == minlp.fac_y[k].value:
+                            for pp in mip.part:
+                                if yp_max[pp] == yp_min[p] and xp_max[pp] <= xp_max[p] and xp_min[pp] >= xp_min[p]:
+                                    select_part[pp] = 1
+                        if yp_max[p] == minlp.fac_y[k].value:
+                            for pp in mip.part:
+                                if yp_min[pp] == yp_max[p] and xp_max[pp] <= xp_max[p] and xp_min[pp] >= xp_min[p]:
+                                    select_part[pp] = 1
+        print(select_part)
 
-
-
-
+        dist_supp, dist_mkt, max_dist_supp, max_dist_mkt, xp_min, xp_max, yp_min, yp_max, mapping \
+            = refine_gride(mip, xp_min, xp_max, yp_min, yp_max, n_x, n_y, select_part, dist_supp, dist_mkt,
+                           max_dist_supp, max_dist_mkt, mapping)
+        n_part = len(mapping)
+        mip = create_multiperiod_mip(data, n_part)
 

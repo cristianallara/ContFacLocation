@@ -1,11 +1,11 @@
 from pyomo.environ import *
 from input_data import read_data
-from minlp_formulation import create_minlp
-from mip_LB import create_mip
-from lagrangean_relaxation_mip import create_LR
-from grid_discretization import discretize_space
-from forward import forward_pass
-from backward import backward_pass
+from nested_decomp.minlp_formulation import create_minlp
+from nested_decomp.mip_LB import create_mip
+from nested_decomp.lagrangean_relaxation_mip import create_LR
+from uniform_grid import discretize_space
+from nested_decomp.forward import forward_pass
+from nested_decomp.backward import backward_pass
 import time
 
 from full_space_mip import create_multiperiod_mip
