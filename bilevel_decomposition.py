@@ -185,6 +185,7 @@ for iter_ in iter_list:
     else:
         # Choose the regions to repartition
         select_part = {}
+        # TODO: change this to only select based on fac_x fac_y
         for p in mip.part:
             if sum(w_p[k, p, t] for k in mip.fac for t in mip.t) == 0:
                 select_part[p] = 0
@@ -194,19 +195,19 @@ for iter_ in iter_list:
                     if sum(w_p[k, p, t] for t in mip.t) >= 1:
                         if xp_min[p] == minlp.fac_x[k].value:
                             for pp in mip.part:
-                                if xp_max[pp] == xp_min[p] and yp_max[pp] <= yp_max[p] and yp_min[pp] >= yp_min[p]:
+                                if xp_max[pp] == xp_min[p] and yp_min[pp] <= minlp.fac_y[k].value <= yp_max[pp]:
                                     select_part[pp] = 1
                         if xp_max[p] == minlp.fac_x[k].value:
                             for pp in mip.part:
-                                if xp_min[pp] == xp_max[p] and yp_max[pp] <= yp_max[p] and yp_min[pp] >= yp_min[p]:
+                                if xp_min[pp] == xp_max[p] and yp_min[pp] <= minlp.fac_y[k].value <= yp_max[pp]:
                                     select_part[pp] = 1
                         if yp_min[p] == minlp.fac_y[k].value:
                             for pp in mip.part:
-                                if yp_max[pp] == yp_min[p] and xp_max[pp] <= xp_max[p] and xp_min[pp] >= xp_min[p]:
+                                if yp_max[pp] == yp_min[p] and xp_min[pp] <= minlp.fac_x[k].value <= xp_max[pp]:
                                     select_part[pp] = 1
                         if yp_max[p] == minlp.fac_y[k].value:
                             for pp in mip.part:
-                                if yp_min[pp] == yp_max[p] and xp_max[pp] <= xp_max[p] and xp_min[pp] >= xp_min[p]:
+                                if yp_min[pp] == yp_max[p] and xp_min[pp] <= minlp.fac_x[k].value <= xp_max[pp]:
                                     select_part[pp] = 1
         print(select_part)
 
@@ -215,4 +216,5 @@ for iter_ in iter_list:
                            max_dist_supp, max_dist_mkt, mapping)
         n_part = len(mapping)
         mip = create_multiperiod_mip(data, n_part)
+
 
