@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 
-def create_multiperiod_mip(data, n_part):
+def create_multiperiod_mip(data, n_part, select_part, if_complement):
 
     suppliers, xi, yi, time_periods, markets, xj, yj, centr_facilities, distr_facilities, facilities, cv, mc, a, d, \
     RM, FIC, VIC, FOC, VOC, ft1, ft2, vt1, vt2, interest_factor = data
@@ -156,22 +156,28 @@ def create_multiperiod_mip(data, n_part):
         return Constraint.Skip
     m.sym_1 = Constraint(m.distr, m.distr, m.t, rule=sym_1)
 
-    def sym_2(_b, n, v, t):
+    def sym_2(m, n, v, t):
         if m.centr.ord(n) < m.centr.ord(v):
             return sum(m.w[n, p, t] for p in m.part ) >= sum(m.w[v, p, t] for p in m.part)
         return Constraint.Skip
     m.sym_2 = Constraint(m.centr, m.centr, m.t, rule=sym_2)
 
-    def sym_3(_b, l, u, p, t):
+    def sym_3(m, l, u, p, t):
         if m.distr.ord(l) < m.distr.ord(u):
             return sum(m.w[l, pp, t] for pp in m.part if m.part.ord(pp) <= m.part.ord(p)) >= m.w[u, p, t]
         return Constraint.Skip
     m.sym_3 = Constraint(m.distr, m.distr, m.part, m.t, rule=sym_3)
 
-    def sym_4(_b, n, v, p, t):
+    def sym_4(m, n, v, p, t):
         if m.centr.ord(n) < m.centr.ord(v):
             return sum(m.w[n, pp, t] for pp in m.part if m.part.ord(pp) <= m.part.ord(p)) >= m.w[v, p, t]
         return Constraint.Skip
     m.sym_4 = Constraint(m.centr, m.centr, m.part, m.t, rule=sym_4)
+
+    def complement_set_partitions(m):
+        if if_complement:
+            return sum(m.b[k, p, t] for p in m.part if select_part[p] == 0 for t in m.t for k in m.fac) >= 1
+        return Constraint.Skip
+    m.complement_set_partitions = Constraint(rule=complement_set_partitions)
 
     return m

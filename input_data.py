@@ -3,27 +3,27 @@ import pandas as pd
 import os
 
 
-def read_data():
-    curPath = os.path.abspath(os.path.curdir)
+def read_data(datafolder):
+    curPath = os.path.join(os.path.abspath(os.path.curdir), datafolder)
 
     # suppliers
-    supplier_location = pd.read_csv(os.path.join(curPath, 'data/suppliers_location.csv'), index_col=0)
+    supplier_location = pd.read_csv(os.path.join(curPath, 'suppliers_location.csv'), index_col=0)
     suppliers = list(supplier_location.index)
     xi = {i: supplier_location.loc[i].values[0] for i in suppliers}
     yi = {i: supplier_location.loc[i].values[1] for i in suppliers}
-    raw_material = pd.read_csv(os.path.join(curPath, 'data/raw_material_cost.csv'), index_col=0)
+    raw_material = pd.read_csv(os.path.join(curPath, 'raw_material_cost.csv'), index_col=0)
 
     # time periods
     time_periods = raw_material.columns.values.tolist()
 
     # markets
-    markets_location = pd.read_csv(os.path.join(curPath, 'data/markets_location.csv'), index_col=0)
+    markets_location = pd.read_csv(os.path.join(curPath, 'markets_location.csv'), index_col=0)
     markets = list(markets_location.index)
     xj = {j: markets_location.loc[j].values[0] for j in markets}
     yj = {j: markets_location.loc[j].values[1] for j in markets}
 
     # facilities
-    facilities_data = pd.read_csv(os.path.join(curPath, 'data/facilities_data.csv'), index_col=0)
+    facilities_data = pd.read_csv(os.path.join(curPath, 'facilities_data.csv'), index_col=0)
     centr_facilities = ['cf' + str(n) for n in range(1, int(facilities_data.loc['centr']['number']) + 1)]
     distr_facilities = ['df' + str(n) for n in range(1, int(facilities_data.loc['distr']['number']) + 1)]
     facility_types = {'distr': distr_facilities, 'centr': centr_facilities}
@@ -32,9 +32,9 @@ def read_data():
     mc = {k: facilities_data.loc[n]['mc'] for n in facility_types.keys() for k in facilities if k in facility_types[n]}
 
     # availability and demand
-    availability = pd.read_csv(os.path.join(curPath, 'data/availability.csv'), index_col=0)
+    availability = pd.read_csv(os.path.join(curPath, 'availability.csv'), index_col=0)
     a = {(i, t): availability[t][i] for i in suppliers for t in time_periods}
-    demand = pd.read_csv(os.path.join(curPath, 'data/demand.csv'), index_col=0)
+    demand = pd.read_csv(os.path.join(curPath, 'demand.csv'), index_col=0)
     d = {(j, t): demand[t][j] for j in markets for t in time_periods}
 
     # cost of raw material
@@ -51,7 +51,7 @@ def read_data():
            k in facility_types[n] for t in time_periods}
 
     # transportation costs
-    trans_costs = pd.read_csv(os.path.join(curPath, 'data/coeff_trans_costs.csv'), index_col=0, header=None)
+    trans_costs = pd.read_csv(os.path.join(curPath, 'coeff_trans_costs.csv'), index_col=0, header=None)
     ft1 = {(i, k, t): trans_costs.loc['ft1'].values[0] for i in suppliers for k in facilities for t in time_periods}
     ft2 = {(k, j, t): trans_costs.loc['ft2'].values[0] for k in facilities for j in markets for t in time_periods}
     vt1 = {(i, k, t): trans_costs.loc['vt1'].values[0] for i in suppliers for k in facilities for t in time_periods}
