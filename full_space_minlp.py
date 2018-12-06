@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 
-def create_multiperiod_minlp(data):
+def create_multiperiod_minlp(data, dist_min):
 
     suppliers, xi, yi, time_periods, markets, xj, yj, centr_facilities, distr_facilities, facilities, cv, mc, a, d, \
     RM, FIC, VIC, FOC, VOC, ft1, ft2, vt1, vt2, interest_factor = data
@@ -47,7 +47,6 @@ def create_multiperiod_minlp(data):
     m.y_max = Param(m.fac, initialize={k: y_max for k in m.fac}, mutable=True)
 
     dist_max = sqrt((x_max - x_min)**2 + (y_max-y_min)**2)
-    dist_min = 0.5 # arbitrary
 
     # Variables declaration
     m.f_supp2fac = Var(m.suppl, m.fac, m.t, domain=NonNegativeReals)
@@ -108,10 +107,6 @@ def create_multiperiod_minlp(data):
         return sum(m.f_supp2fac[i, k, t] for k in m.fac) <= m.avail[i, t]
     m.availability = Constraint(m.suppl, m.t, rule=availability)
 
-    def max_cap(m, k, t):
-        return m.f_fac[k, t] <= m.cap[k]*m.w[k, t]
-    m.max_cap = Constraint(m.fac, m.t, rule=max_cap)
-
     def dist_supp2fac_rule(m, i, k):
         return m.dist_supp2fac[i, k] >= sqrt((m.suppl_x[i] - m.fac_x[k])**2 + (m.suppl_y[i] - m.fac_y[k])**2)
     m.dist_supp2fac_rule = Constraint(m.suppl, m.fac, rule=dist_supp2fac_rule)
@@ -170,6 +165,10 @@ def create_multiperiod_minlp(data):
         else:
             return m.w[k, t] == m.w[k, m.t[m.t.ord(t) - 1]] + m.b[k, t]
     m.logic_5 = Constraint(m.fac, m.t, rule=logic_5)
+
+    def logic_6(m, k):
+        return sum(m.b[k, t] for t in m.t) <= 1
+    m.logic_6 = Constraint(m.fac, rule=logic_6)
 
     def sym_1(m, l, u):
         if m.distr.ord(l) < m.distr.ord(u):

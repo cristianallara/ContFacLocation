@@ -10,32 +10,35 @@ start_time = time.time()
 
 # ########################################## User-defined parameters #############################################
 
+# case study from folder
+datafolder = 'data5'
+
 # bilevel decomposition
 max_iter_bilevel = 10
-opt_tol_bilevel = 0.005         # optimality tolerance for the nested decomposition
+opt_tol_bilevel = 0.0           # optimality tolerance for the nested decomposition
 
 # MILP
-time_limit_mip = 100             # time limit in seconds for mip_LB
-opt_tol_mip = 0.0
+time_limit_mip = 3600           # time limit in seconds for mip_LB
+opt_tol_mip = 0.01
 
 # grid
 dist_min = 0.5                  # arbitrary
-p_x = 10                         # start grid with p_x X p_y partitions
+p_x = 10                        # start grid with p_x X p_y partitions
 p_y = 10
-n_x = 5                         # adds p_x + n_x and p_y + n_y in each iteration of the bilevel decomposition
-n_y = 5
+n_x = 2                         # adds p_x + n_x and p_y + n_y in each iteration of the bilevel decomposition
+n_y = 2
 
 # ################################################################################################################
 
 # Input data
-data = read_data('data5')
+data = read_data(datafolder)
 
 # Create minlp model
-minlp = create_multiperiod_minlp(data)
+minlp = create_multiperiod_minlp(data, dist_min)
 # nlpsolver = SolverFactory('gams')
 # nlpsolver.solve(minlp,
 #                 tee=True,
-#                 add_options=['option reslim=3600; option optcr = 0.005;'],
+#                 add_options=['option reslim=3600; option optcr = 0.0;'],
 #                 # keepfiles=True,
 #                 solver='baron',
 #                 load_solutions=True
@@ -119,7 +122,7 @@ for iter_ in iter_list:
     for t in mip.t:
         for k in minlp.fac:
             minlp.w[k, t].fix(w_fx[k, t])
-            # print('w', k, t, w_fx[k, t])
+            print('w', k, t, w_fx[k, t])
 
     z_supp2fac_fx = {(i, k, t): sum(z_supp2fac_p[i, k, p, t] for p in mip.part) for i in mip.suppl
                      for k in mip.fac for t in mip.t}
@@ -127,6 +130,7 @@ for iter_ in iter_list:
         for i in minlp.suppl:
             for k in minlp.fac:
                 minlp.z_supp2fac[i, k, t].fix(z_supp2fac_fx[i, k, t])
+                print('z_supp', i, k, t, z_supp2fac_fx[i, k, t])
 
     z_fac2mkt_fx = {(k, j, t): sum(z_fac2mkt_fx[k, j, p, t] for p in mip.part) for j in mip.mkt
                     for k in mip.fac for t in mip.t}
@@ -134,6 +138,7 @@ for iter_ in iter_list:
         for k in minlp.fac:
             for j in minlp.mkt:
                 minlp.z_fac2mkt[k, j, t].fix(z_fac2mkt_fx[k, j, t])
+                print('z_mkt', k, j, t, z_fac2mkt_fx[k, j, t])
 
     # Update bounds for (fac_x, fac_y)
     fac_x_max = {}
@@ -158,15 +163,15 @@ for iter_ in iter_list:
         minlp.x_min[k] = fac_x_min[k]
         minlp.y_max[k] = fac_y_max[k]
         minlp.y_min[k] = fac_y_min[k]
-        # print(k, 'x_max: ', fac_x_max[k], 'x_min: ', fac_x_min[k])
-        # print(k, 'y_max: ', fac_y_max[k], 'y_min: ', fac_y_min[k])
+        print(k, 'x_max: ', fac_x_max[k], 'x_min: ', fac_x_min[k])
+        print(k, 'y_max: ', fac_y_max[k], 'y_min: ', fac_y_min[k])
 
     # Solve NLP for UB
     nlpsolver = SolverFactory('gams')
     nlpsolver.solve(minlp,
-                    # tee=True,
+                    tee=True,
                     add_options=['option reslim=300; option optcr = 0.0;'],
-                    # keepfiles=True,
+                    keepfiles=True,
                     solver='baron',
                     load_solutions=True
                     )
@@ -255,7 +260,7 @@ for iter_ in iter_list:
         else:
             prune = False
         print('Would it be pruned: ', prune)
-        # TODO: add pruning routine 
+        # TODO: add pruning routine
 
         dist_supp, dist_mkt, max_dist_supp, max_dist_mkt, xp_min, xp_max, yp_min, yp_max, mapping \
             = refine_gride(mip, xp_min, xp_max, yp_min, yp_max, n_x, n_y, select_part, dist_supp, dist_mkt,

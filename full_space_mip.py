@@ -95,10 +95,6 @@ def create_multiperiod_mip(data, n_part, select_part, if_complement):
         return sum(m.f_supp2fac[i, k, p, t] for k in m.fac for p in m.part) <= m.avail[i, t]
     m.availability = Constraint(m.suppl, m.t, rule=availability)
 
-    def max_cap(m, k, p, t):
-        return m.f_fac[k, p, t] <= m.cap[k]*m.w[k, p, t]
-    m.max_cap = Constraint(m.fac, m.part, m.t, rule=max_cap)
-
     def supp2fac_bigM(m, i, k, p, t):
         return m.f_supp2fac[i, k, p, t] <= m.avail[i, t]*m.z_supp2fac[i, k, p, t]
     m.supp2fac_bigM = Constraint(m.suppl, m.fac, m.part, m.t, rule=supp2fac_bigM)
