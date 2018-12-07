@@ -4,7 +4,7 @@ import os
 
 
 def read_data(datafolder):
-    curPath = os.path.join(os.path.abspath(os.path.curdir), datafolder)
+    curPath = os.path.join(os.path.abspath(os.path.curdir), 'data', datafolder)
 
     # suppliers
     supplier_location = pd.read_csv(os.path.join(curPath, 'suppliers_location.csv'), index_col=0)

@@ -11,20 +11,20 @@ start_time = time.time()
 # ########################################## User-defined parameters #############################################
 
 # case study from folder
-datafolder = 'data5'
+datafolder = 'data1_singleplant'
 
 # bilevel decomposition
-max_iter_bilevel = 10
-opt_tol_bilevel = 0.0           # optimality tolerance for the nested decomposition
+max_iter_bilevel = 2
+opt_tol_bilevel = 0.01           # optimality tolerance for the nested decomposition
 
 # MILP
 time_limit_mip = 3600           # time limit in seconds for mip_LB
-opt_tol_mip = 0.01
+opt_tol_mip = 0.0
 
 # grid
 dist_min = 0.5                  # arbitrary
-p_x = 10                        # start grid with p_x X p_y partitions
-p_y = 10
+p_x = 2                        # start grid with p_x*p_y partitions
+p_y = 2
 n_x = 2                         # adds p_x + n_x and p_y + n_y in each iteration of the bilevel decomposition
 n_y = 2
 
@@ -102,12 +102,14 @@ for iter_ in iter_list:
     LB = mip_sol[iter_]
 
     w_p = {}
+    b_p = {}
     z_supp2fac_p = {}
     z_fac2mkt_fx = {}
     for t in mip.t:
         for p in mip.part:
             for k in mip.fac:
                 w_p[k, p, t] = round(mip.w[k, p, t].value)
+                b_p[k, p, t] = round(mip.b[k, p, t].value)
                 if w_p[k, p, t] != 0:
                     print((k, p, t), w_p[k, p, t])
                 for i in mip.suppl:
@@ -123,6 +125,12 @@ for iter_ in iter_list:
         for k in minlp.fac:
             minlp.w[k, t].fix(w_fx[k, t])
             print('w', k, t, w_fx[k, t])
+
+    b_fx = {(k, t): sum(b_p[k, p, t] for p in mip.part) for k in mip.fac for t in mip.t}
+    for t in mip.t:
+        for k in minlp.fac:
+            minlp.b[k, t].fix(b_fx[k, t])
+            print('b', k, t, b_fx[k, t])
 
     z_supp2fac_fx = {(i, k, t): sum(z_supp2fac_p[i, k, p, t] for p in mip.part) for i in mip.suppl
                      for k in mip.fac for t in mip.t}
@@ -173,7 +181,8 @@ for iter_ in iter_list:
                     add_options=['option reslim=300; option optcr = 0.0;'],
                     keepfiles=True,
                     solver='baron',
-                    load_solutions=True
+                    load_solutions=True,
+                    symbolic_solver_labels=True
                     )
     nlp_sol[iter_] = minlp.obj()
     minlp.fac_x.pprint()
@@ -250,7 +259,7 @@ for iter_ in iter_list:
         # Solve MILP with added constraint for LB^c
         mipcompsolver = SolverFactory('gurobi')
         mipcompsolver.options['mipgap'] = opt_tol_mip
-        mipcompsolver.options['timelimit'] = time_limit_mip
+        mipcompsolver.options['timelimit'] = 100
         mipcompsolver.options['threads'] = 6
         mipcompsolver.solve(mip_comp)
         LB_comp = mip_comp.obj()

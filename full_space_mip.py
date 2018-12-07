@@ -160,13 +160,13 @@ def create_multiperiod_mip(data, n_part, select_part, if_complement):
 
     def sym_3(m, l, u, p, t):
         if m.distr.ord(l) < m.distr.ord(u):
-            return sum(m.w[l, pp, t] for pp in m.part if m.part.ord(pp) <= m.part.ord(p)) >= m.w[u, p, t]
+            return sum(m.w[l, pp, t] for pp in m.part if m.part.ord(pp) >= m.part.ord(p)) >= m.w[u, p, t]
         return Constraint.Skip
     m.sym_3 = Constraint(m.distr, m.distr, m.part, m.t, rule=sym_3)
 
     def sym_4(m, n, v, p, t):
         if m.centr.ord(n) < m.centr.ord(v):
-            return sum(m.w[n, pp, t] for pp in m.part if m.part.ord(pp) <= m.part.ord(p)) >= m.w[v, p, t]
+            return sum(m.w[n, pp, t] for pp in m.part if m.part.ord(pp) >= m.part.ord(p)) >= m.w[v, p, t]
         return Constraint.Skip
     m.sym_4 = Constraint(m.centr, m.centr, m.part, m.t, rule=sym_4)
 
