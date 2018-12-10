@@ -25,6 +25,7 @@ def refine_gride(mip, xp_min, xp_max, yp_min, yp_max, n_x, n_y, select_part, dis
                 new_idx.extend([x_idx, y_idx])
                 list_idx_part.append(new_idx)
                 list_old_p.append(p)
+    # print(list_old_p)
 
     # order them by x_idx then by y_idx
     for i in range(len(list_idx_part)):
@@ -96,4 +97,4 @@ def refine_gride(mip, xp_min, xp_max, yp_min, yp_max, n_x, n_y, select_part, dis
     # print(mapping_new)
 
     return dist_supp_new, dist_mkt_new, max_dist_supp_new, max_dist_mkt_new, xp_min_new, xp_max_new, yp_min_new, \
-           yp_max_new, mapping_new
+           yp_max_new, mapping_new, list_old_p

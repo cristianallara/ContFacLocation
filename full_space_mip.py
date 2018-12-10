@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 
-def create_multiperiod_mip(data, n_part, select_part, if_complement):
+def create_multiperiod_mip(data, n_part, b_part, fac_name, if_complement):
 
     suppliers, xi, yi, time_periods, markets, xj, yj, centr_facilities, distr_facilities, facilities, cv, mc, a, d, \
     RM, FIC, VIC, FOC, VOC, ft1, ft2, vt1, vt2, interest_factor = data
@@ -170,10 +170,12 @@ def create_multiperiod_mip(data, n_part, select_part, if_complement):
         return Constraint.Skip
     m.sym_4 = Constraint(m.centr, m.centr, m.part, m.t, rule=sym_4)
 
-    def complement_set_partitions(m):
+    def complement_set_partitions(m, k):
         if if_complement:
-            return sum(m.b[k, p, t] for p in m.part if select_part[p] == 0 for t in m.t for k in m.fac) >= 1
+            if k == fac_name:
+                return sum(m.b[k, p, t] for p in m.part if b_part[k, p] == 0 for t in m.t) >= 1
+            return Constraint.Skip
         return Constraint.Skip
-    m.complement_set_partitions = Constraint(rule=complement_set_partitions)
+    m.complement_set_partitions = Constraint(m.fac, rule=complement_set_partitions)
 
     return m
