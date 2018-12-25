@@ -11,17 +11,16 @@ start_time = time.time()
 # ########################################## User-defined parameters #############################################
 
 # case study from folder
-datafolder = 'data7'
+datafolder = 'toyproblem_data'
 
 # bilevel decomposition
 max_iter_bilevel = 100
 opt_tol_bilevel = 0.01          # optsimality tolerance for the bilevel decomposition
 non_uniform = False
-branch_and_bound = False
 
 # MILP
 time_limit_mip = 3600         # time limit in seconds for mip_LB
-opt_tol_mip = 0.0
+opt_tol_mip = 0.00001
 
 # grid
 dist_min = 0.2                    # arbitrary
@@ -37,17 +36,17 @@ data = read_data(datafolder)
 
 # Create minlp model
 minlp = create_multiperiod_minlp(data, dist_min)
-# nlpsolver = SolverFactory('gams')
-# nlpsolver.solve(minlp,
-#                 tee=True,
-#                 add_options=['option reslim=3600; option optcr = 0.01;'],
-#                 # keepfiles=True,
-#                 solver='baron',
-#                 load_solutions=True
-#                 )
-# minlp.w.pprint()
-# minlp.fac_x.pprint()
-# minlp.fac_y.pprint()
+nlpsolver = SolverFactory('gams')
+nlpsolver.solve(minlp,
+                tee=True,
+                add_options=['option reslim=3600; option optcr = 0.01;'],
+                # keepfiles=True,
+                solver='baron',
+                load_solutions=True
+                )
+minlp.w.pprint()
+minlp.fac_x.pprint()
+minlp.fac_y.pprint()
 
 
 # Tightest rectangle that includes all points
@@ -63,12 +62,8 @@ opt_gap = {}
 iter_list = range(1, max_iter_bilevel+1)
 
 select_part = {}
-for p in range(1, p_x*p_y + 1):
-    select_part[p] = 0
-
 list_pruned_regions = {}
-
-w_iter = {}
+pruned_fac = []
 
 # ################################### Bilevel Decomposition ###################################
 
@@ -108,7 +103,7 @@ for iter_ in iter_list:
     mipsolver.options['mipgap'] = opt_tol_mip
     mipsolver.options['timelimit'] = time_limit_mip
     mipsolver.options['threads'] = 6
-    mipsolver.solve(mip)  # , tee=True)
+    mipsolver.solve(mip, tee=True)
 
     mip_sol[iter_] = mip.obj()
     LB = mip_sol[iter_]
@@ -142,7 +137,6 @@ for iter_ in iter_list:
     for t in mip.t:
         for k in minlp.fac:
             minlp.w[k, t].fix(w_fx[k, t])
-            w_iter[k, t, iter_] = w_fx[k, t]
             # print('w', k, t, w_fx[k, t])
 
     b_fx = {(k, t): sum(b_p[k, p, t] for p in mip.part) for k in mip.fac for t in mip.t}
@@ -204,8 +198,8 @@ for iter_ in iter_list:
                     # symbolic_solver_labels=True
                     )
     nlp_sol[iter_] = minlp.obj()
-    # minlp.fac_x.pprint()
-    # minlp.fac_y.pprint()
+    minlp.fac_x.pprint()
+    minlp.fac_y.pprint()
 
     print('solution of iteration', iter_, ': ', nlp_sol)
     UB = min(nlp_sol[idx] for idx in iter_list if idx <= iter_)
@@ -216,17 +210,6 @@ for iter_ in iter_list:
 
     # ################################### Optimality check and Pruning ###################################
 
-    # TODO: use only uniform partitioning even after pruning
-
-    # if iter_ > 1:
-    #     branch_and_bound = True
-    #     for k in mip.fac:
-    #         for t in mip.t:
-    #             if w_iter[k, t, iter_] != w_iter[k, t, iter_-1]: TODO: delete w_iter if I do delete this
-    #                 branch_and_bound = False
-    # else:
-    #     branch_and_bound = True
-
     if opt_gap[iter_] <= opt_tol_bilevel or iter_ == max_iter_bilevel:
         fac_x = {k: minlp.fac_x[k].value}
         fac_y = {k: minlp.fac_y[k].value}
@@ -235,61 +218,30 @@ for iter_ in iter_list:
         print("Solution Time (s)", elapsed_time)
         break
     else:
-        # Choose active partition
-        select_part = {} # TODO: potentially delete this
-        for p in mip.part:
-            if sum(w_p[k, p, t] for k in mip.fac for t in mip.t) == 0:
-                select_part[p] = 0
-            else:
-                select_part[p] = 1
-                for k in mip.fac:
-                    if sum(w_p[k, p, t] for t in mip.t) >= 1:
-                        if xp_min[p] == minlp.fac_x[k].value:
-                            for pp in mip.part:
-                                if xp_max[pp] == xp_min[p] and yp_min[pp] <= minlp.fac_y[k].value <= yp_max[pp]:
-                                    select_part[pp] = 1
-                        if xp_max[p] == minlp.fac_x[k].value:
-                            for pp in mip.part:
-                                if xp_min[pp] == xp_max[p] and yp_min[pp] <= minlp.fac_y[k].value <= yp_max[pp]:
-                                    select_part[pp] = 1
-                        if yp_min[p] == minlp.fac_y[k].value:
-                            for pp in mip.part:
-                                if yp_max[pp] == yp_min[p] and xp_min[pp] <= minlp.fac_x[k].value <= xp_max[pp]:
-                                    select_part[pp] = 1
-                        if yp_max[p] == minlp.fac_y[k].value:
-                            for pp in mip.part:
-                                if yp_min[pp] == yp_max[p] and xp_min[pp] <= minlp.fac_x[k].value <= xp_max[pp]:
-                                    select_part[pp] = 1
-        print(select_part)
-
         # Branch-and-bound to prune regions and facilities:
-        prune = {}
-        if branch_and_bound:
-            print("B&B")
-            n_part = len(mip.part)
 
-            for type in [mip.centr, mip.distr]:
-                for k in type:
+        print("B&B")
+        prune = {}
+        n_part = len(mip.part)
+
+        for type_fac in [mip.centr, mip.distr]:
+            for k in type_fac:
+                if k not in pruned_fac:
 
                     # Generate MILP restricting facility k to be built in the complement set of partitions
                     mip_comp = create_multiperiod_mip(data, n_part, b_part, k, if_complement=True)
-                    prune[k] = False # initialize as false
-                    for k_ in type:
-                        if type.ord(k_) < type.ord(k):
+
+                    prune[k] = False  # initialize as false
+
+                    # Check if any pruned regions for previous facilities
+                    for k_ in type_fac:
+                        if type_fac.ord(k_) < type_fac.ord(k):
                             if prune[k_]:
-                                if sum(b_part[k_, p] for p in mip.part) == 0:
-                                    prune[k] = True
-                                    break
+                                # if just a region was pruned for a certain facility, keep it pruned
                                 for p in mip.part:
                                     if b_part[k_, p] == 0:
                                         for t in mip_comp.t:
                                             mip_comp.b[k_, p, t].fix(0.0)
-                    if prune[k]:
-                        print('Prune facility ', k)
-                        for k_ in type:
-                            if type.ord(k_) > type.ord(k):
-                                prune[k_] = True
-                        break
 
                     for i in mip_comp.suppl:
                         for p in mip_comp.part:
@@ -323,35 +275,44 @@ for iter_ in iter_list:
                     print('LB^c: ', LB_comp)
                     if LB_comp > UB:
                         prune[k] = True
+                        if sum(b_part[k, p] for p in mip.part) == 0:
+                            pruned_fac_type = [k_ for k_ in type_fac if type_fac.ord(k_) >= type_fac.ord(k)]
+                            pruned_fac.extend(pruned_fac_type)
+                            print('pruned facilities:', pruned_fac)
+                            break
                     else:
                         prune[k] = False
                     print('Prune complementary partitions for facility ', k, '? ', prune[k])
 
-            for k in mip.fac:
-                if prune[k]:
-                    non_uniform = True
+        print('partitioning')
+        for p in mip.part:
+            select_part[p] = 1
+        dist_supp, dist_mkt, max_dist_supp, max_dist_mkt, xp_min, xp_max, yp_min, yp_max, mapping, list_old_p \
+            = refine_gride(mip, xp_min, xp_max, yp_min, yp_max, n_x, n_y, select_part, dist_supp, dist_mkt,
+                           max_dist_supp, max_dist_mkt, mapping)
+        n_part = len(mapping)
+        print(n_part)
 
-        if non_uniform:
-            print('non-uniform')
-            dist_supp, dist_mkt, max_dist_supp, max_dist_mkt, xp_min, xp_max, yp_min, yp_max, mapping, list_old_p \
-                = refine_gride(mip, xp_min, xp_max, yp_min, yp_max, n_x, n_y, select_part, dist_supp, dist_mkt,
-                               max_dist_supp, max_dist_mkt, mapping)
-            n_part = len(mapping)
-            mip = create_multiperiod_mip(data, n_part, {}, None, if_complement=False)
-        else:
-            print('uniform')
-            p_x += n_x
-            p_y += n_y
-            n_part = p_x*p_y
-            mip = create_multiperiod_mip(data, n_part, {}, None, if_complement=False)
-            dist_supp, dist_mkt, max_dist_supp, max_dist_mkt, xp_min, xp_max, yp_min, yp_max, mapping \
-                = discretize_space(mip, x_min, x_max, y_min, y_max, p_x, p_y)
+        mip = create_multiperiod_mip(data, n_part, {}, None, if_complement=False)
 
-        if branch_and_bound:
-            print("B&B")
-            # print(b_part)
-            list_pruned_regions[iter_] = []
-            for k in mip.fac:
+        # fix all variables indexed by pruned facilities to 0.0
+        for k in pruned_fac:
+            for p in mip.part:
+                for t in mip.t:
+                    mip.w[k, p, t].fix(0.0)
+                    mip.b[k, p, t].fix(0.0)
+                    mip.f_fac[k, p, t].fix(0.0)
+                    for i in mip.suppl:
+                        mip.f_supp2fac[i, k, p, t].fix(0.0)
+                        mip.z_supp2fac[i, k, p, t].fix(0.0)
+                    for j in mip.mkt:
+                        mip.f_fac2mkt[k, j, p, t].fix(0.0)
+                        mip.z_fac2mkt[k, j, p, t].fix(0.0)
+
+        # print(b_part)
+        list_pruned_regions[iter_] = []
+        for k in mip.fac:
+            if k not in pruned_fac:
                 if prune[k]:
                     for p in mip.part:
                         old_p = list_old_p[p-1]
@@ -371,7 +332,7 @@ for iter_ in iter_list:
                         for t in mip.t:
                             mip.b[k, p, t].fix(0.0)
                             list_pruned_regions[iter_].append((k, p))
-        # print(list_pruned_regions)
+        print(list_pruned_regions)
         # mip.b.pprint()
 
 

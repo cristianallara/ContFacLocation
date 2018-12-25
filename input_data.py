@@ -27,7 +27,7 @@ def read_data(datafolder):
     centr_facilities = ['cf' + str(n) for n in range(1, int(facilities_data.loc['centr']['number']) + 1)]
     distr_facilities = ['df' + str(n) for n in range(1, int(facilities_data.loc['distr']['number']) + 1)]
     facility_types = {'distr': distr_facilities, 'centr': centr_facilities}
-    facilities = list(distr_facilities + centr_facilities)
+    facilities = list(centr_facilities + distr_facilities)
     cv = {k: facilities_data.loc[n]['cv'] for n in facility_types.keys() for k in facilities if k in facility_types[n]}
     mc = {k: facilities_data.loc[n]['mc'] for n in facility_types.keys() for k in facilities if k in facility_types[n]}
 
