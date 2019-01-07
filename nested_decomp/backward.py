@@ -4,8 +4,8 @@ from pyomo.environ import *
 def backward_pass(t_ord, bl, equality_constraints, time_limit_mip, bl_LR, benders_cut, integer_cut,
                   strength_benders_cut):
 
-    if t_ord != 4:
-        bl.fut_cost.pprint()
+    # if t_ord != 4:
+        # bl.fut_cost.pprint()
 
     if t_ord != 1:
         if benders_cut or strength_benders_cut:
@@ -19,7 +19,7 @@ def backward_pass(t_ord, bl, equality_constraints, time_limit_mip, bl_LR, bender
             cost_LP = bl.obj()
             cost = cost_LP
             cost_LR = 0
-            bl.w.pprint()
+            # bl.w.pprint()
 
             # get LP multipliers
             mltp = {key: - bl.dual[equality_constraints[key]] for key in equality_constraints.keys()}
@@ -57,7 +57,7 @@ def backward_pass(t_ord, bl, equality_constraints, time_limit_mip, bl_LR, bender
         mipsolver.options['FeasibilityTol'] = 1e-9
         mipsolver.solve(bl)  # , tee=True)
 
-        bl.w.pprint()
+        # bl.w.pprint()
         cost = bl.obj()
         cost_LR = 0
         cost_LP = 0

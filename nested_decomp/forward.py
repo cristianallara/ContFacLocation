@@ -11,7 +11,7 @@ def forward_pass(bl, state_vars, opt_tol_mip, time_limit_mip):
     mipsolver.options['FeasibilityTol'] = 1e-9
     mipsolver.solve(bl) # , tee=True)
 
-    bl.w.pprint()
+    # bl.w.pprint()
 
     # Fix the state variable as parameter for next t
 

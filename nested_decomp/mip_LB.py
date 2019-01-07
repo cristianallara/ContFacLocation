@@ -1,7 +1,7 @@
 from pyomo.environ import *
 
 
-def create_mip(data, p_x, p_y):
+def create_mip(data, p_x, p_y, maxiter):
 
     suppliers, xi, yi, time_periods, markets, xj, yj, centr_facilities, distr_facilities, facilities, cv, mc, a, d, \
     RM, FIC, VIC, FOC, VOC, ft1, ft2, vt1, vt2, interest_factor = data
@@ -16,6 +16,7 @@ def create_mip(data, p_x, p_y):
     m.centr = Set(within=m.fac, initialize=centr_facilities, ordered=True)
     m.mkt = Set(initialize=markets, ordered=True)
     m.t = Set(initialize=time_periods, ordered=True)
+    m.iters = RangeSet(maxiter)
 
     # Parameters
     m.suppl_x = Param(m.suppl, initialize=xi)
