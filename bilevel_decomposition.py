@@ -18,16 +18,16 @@ datafolder = 'biomass_data'
 
 # bilevel decomposition
 max_iter_bilevel = 100
-opt_tol_bilevel = 0.01          # optsimality tolerance for the bilevel decomposition
+opt_tol_bilevel = 0.02          # optimality tolerance for the bilevel decomposition
 
 # MILP
 time_limit_mip = 3600         # time limit in seconds for mip_LB
-opt_tol_mip = 0.0001
+opt_tol_mip = 0.01
 
 # grid
 dist_min = 0.2                    # arbitrary
-p_x = 4                         # start grid with p_x*p_y partitions
-p_y = 4
+p_x = 2                         # start grid with p_x*p_y partitions
+p_y = 2
 n_x = 2                         # adds p_x + n_x and p_y + n_y in each iteration of the bilevel decomposition
 n_y = 2
 
@@ -40,10 +40,10 @@ data = read_data(datafolder)
 minlp = create_multiperiod_minlp(data, dist_min, [])
 # nlpsolver = SolverFactory('gams')
 # nlpsolver.solve(minlp,
-#                 # tee=True,
-#                 add_options=['option reslim=3600; option optcr = 0.01;'],
+#                 tee=True,
+#                 add_options=['option reslim=3600; option optcr = 0.02;'],
 #                 # keepfiles=True,
-#                 solver='baron',
+#                 solver='antigone',
 #                 load_solutions=True
 #                 )
 # minlp.w.pprint()
@@ -107,7 +107,7 @@ for iter_ in iter_list:
     if iter_ == 1:
         results = mipsolver.solve(mip, tee=True)
     else:
-        results = mipsolver.solve(mip, warmstart = True, tee=True)
+        results = mipsolver.solve(mip, warmstart=True, tee=True)
 
     mip_sol[iter_] = results.problem.lower_bound
     LB = max(mip_sol[i] for i in iter_list if i <= iter_)
@@ -212,10 +212,10 @@ for iter_ in iter_list:
     nlpsolver.solve(minlp,
                     # tee=True,
                     add_options=['option reslim=30; option optcr = 0.0;'],
-                    # keepfiles=True,
+                    keepfiles=True,
                     solver='baron',
                     load_solutions=True,
-                    # symbolic_solver_labels=True
+                    symbolic_solver_labels=True
                     )
     nlp_sol[iter_] = minlp.obj()
     minlp.fac_x.pprint()
@@ -249,27 +249,10 @@ for iter_ in iter_list:
                 pruned_fac = prune_facilities(mip, UB, data, n_part, b_part, pruned_fac, dist_supp, max_dist_supp,
                                               dist_mkt, max_dist_mkt, dist_min)
 
-        # # Check if any partition does not have fixed points (heuristic for partition pruning)
-        # fx_pt_part = {}
-        # for p in mip.part:
-        #     for i in mip.suppl:
-        #         if xp_min[p] <= mip.suppl_x[i] <= xp_max[p] and yp_min[p] <= mip.suppl_y[i] <= yp_max[p]:
-        #             fx_pt_part[p] = True
-        #             break
-        #         else:
-        #             fx_pt_part[p] = False
-        #             continue
-        #     if fx_pt_part[p]:
-        #         continue
-        #     for j in mip.mkt:
-        #         if xp_min[p] <= mip.mkt_x[j] <= xp_max[p] and yp_min[p] <= mip.mkt_y[j] <= yp_max[p]:
-        #             fx_pt_part[p] = True
-        #             break
-        #         else:
-        #             fx_pt_part[p] = False
-        #             continue
-        # print(fx_pt_part)
-        if_prune_partitions = False
+        if iter_ == 1 or iter_ == 2:
+            if_prune_partitions = True
+        else:
+            if_prune_partitions = False
 
         # Choose active partition
         active_part = {}
@@ -309,7 +292,7 @@ for iter_ in iter_list:
         dist_supp, dist_mkt, max_dist_supp, max_dist_mkt, xp_min, xp_max, yp_min, yp_max, mapping, list_old_p \
             = refine_gride(mip, xp_min, xp_max, yp_min, yp_max, n_x, n_y, mapping, iter_, p_y)
 
-        print(yp_min)
+        # print(yp_min)
         n_part = len(mapping)
         print(n_part)
 
@@ -359,11 +342,3 @@ for iter_ in iter_list:
                                 list_pruned_regions[iter_].append(p)
             print(list_pruned_regions)
             # mip.b.pprint()
-
-
-
-
-
-
-
-

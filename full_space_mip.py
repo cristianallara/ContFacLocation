@@ -169,6 +169,7 @@ def create_multiperiod_mip(data, n_part, b_part, fac_name, if_fac_pruning, part_
 
     def logic_5(m, k, p, t):
         if k not in pruned_fac:
+            # return sum(m.b[k, p, tt] for tt in m.t if m.t.ord(tt) <= m.t.ord(t)) >= m.w[k, p, t]
             if m.t.ord(t) == 1:
                 return m.w[k, p, t] == m.b[k, p, t]
             else:
