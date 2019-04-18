@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
 
-# dashList = [(5,2),(2,5),(4,10),(3,3,2,2),(5,2,20,2)]
-
 x = [4.53, 16.6, 125.9, 404.2, 466.1, 2413, 3377, 3601, 3601]
 y = [0, 1, 2, 3, 4, 5, 6, 7, 10]
 plt.step(x, y, label='Acc. Bilevel Decomp.', linestyle='-', marker='^', linewidth=3.0, markersize=7)
@@ -30,3 +28,28 @@ plt.xlim(0, 3600)
 plt.ylim(0, 10)
 
 plt.savefig('performance_curve.png')
+
+x = [4.53, 16.6, 125.9, 404.2, 466.1, 2413, 3377, 3700, 3700]
+y = [0, 1, 2, 3, 4, 5, 6, 7, 10]
+plt.step(x, y, label='Acc. Bilevel Decomp.', linestyle='-', marker='^', linewidth=3.0, markersize=7)
+
+x = [7.45, 16.55, 1361.91, 2135.15, 3392.58, 3700, 3700]
+y = [0, 1, 2, 3, 4, 5, 10]
+plt.step(x, y, label='Acc. Bilevel Decomp. w/o Facility Pruning', linestyle=':',  marker='s', linewidth=4.0, markersize=6)
+
+x = [4.05, 16.94, 31.2, 240.3, 710.28, 2156.03, 3700, 3700]
+y = [0, 1, 2, 3, 4, 5, 6, 10]
+plt.step(x, y, label='Acc. Bilevel Decomp. w/o Partition Pruning', linestyle='-.', marker='x', markersize=6)
+
+x = [4.21, 16.51, 125.32, 455.26, 530.46, 2439.91, 3700, 3700]
+y = [0, 1, 2, 3, 4, 5, 6, 10]
+plt.step(x, y, label='Acc. Bilevel Decomp. w/o warm-start', linestyle=':', marker='o', linewidth=2.0, markersize=6)
+plt.xscale('log')
+
+plt.legend()
+plt.ylabel("Number of instances solved")
+plt.xlabel("Time required to solve instances [s]")
+plt.xlim(0, 3600)
+plt.ylim(0, 10)
+
+plt.savefig('performance_curve_2.png')

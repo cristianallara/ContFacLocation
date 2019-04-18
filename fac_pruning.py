@@ -36,8 +36,7 @@ def prune_facilities(mip, UB, data, n_part, b_part, pruned_fac, dist_supp, max_d
 
                 # Solve MILP with added constraint for LB^c
                 mipcompsolver = SolverFactory('gurobi')
-                mipcompsolver.options['mipgap'] = 0.0001
-                mipcompsolver.options['timelimit'] = 30
+                mipcompsolver.options['timelimit'] = 10
                 mipcompsolver.options['relax_integrality'] = 1
                 mipcompsolver.options['threads'] = 6
                 results = mipcompsolver.solve(mip_comp)  # , tee=True)
