@@ -243,12 +243,11 @@ for iter_ in iter_list:
         n_part = len(mip.part)
 
         # B&B to prune facilities in the first iteration:
-        # if iter_ == 1:
-            # if len(initial_fac_selection) <= 0.5 * len(mip.fac):
-            #     print("B&B to prune facilities")
-            #     pruned_fac = prune_facilities(mip, UB, data, n_part, b_part, pruned_fac, dist_supp, max_dist_supp,
-            #                                   dist_mkt, max_dist_mkt, dist_min)
-        pruned_fac = []
+        if iter_ == 1:
+            if len(initial_fac_selection) <= 0.5 * len(mip.fac):
+                print("B&B to prune facilities")
+                pruned_fac = prune_facilities(mip, UB, data, n_part, b_part, pruned_fac, dist_supp, max_dist_supp,
+                                              dist_mkt, max_dist_mkt, dist_min)
 
         if iter_ == 1 or iter_ == 2:
             if_prune_partitions = True
